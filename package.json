@@ -1,0 +1,25 @@
+{
+  "name": "wrp-comunicacao-digital",
+  "private": true,
+  "version": "1.0.0",
+  "description": "POC/MVP WRP Comunicação Digital — Pregão Eletrônico 089/2026, Prefeitura Municipal de Pompéu/MG.",
+  "engines": {
+    "node": ">=22"
+  },
+  "workspaces": [
+    "apps/*"
+  ],
+  "scripts": {
+    "dev": "concurrently -n api,web -c blue,green \"npm run dev -w @wrp/api\" \"npm run dev -w @wrp/web\"",
+    "build": "npm run build -w @wrp/api && npm run build -w @wrp/web",
+    "typecheck": "npm run typecheck -w @wrp/api && npm run typecheck -w @wrp/web",
+    "test": "npm run test -w @wrp/api",
+    "start": "npm run start -w @wrp/api",
+    "chatwoot:bootstrap": "sh scripts/chatwoot-bootstrap.sh",
+    "ensaio:reset": "sh scripts/reset-ensaio.sh"
+  },
+  "devDependencies": {
+    "concurrently": "^9.2.1"
+  },
+  "license": "UNLICENSED"
+}

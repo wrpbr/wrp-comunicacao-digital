@@ -1,0 +1,14 @@
+node_modules
+dist
+.env
+.env.local
+*.log
+coverage
+data/
+.DS_Store
+apps/web/dist
+apps/api/dist
+infra/nginx/certs/*.crt
+infra/nginx/certs/*.key
+.vite
+*.tsbuildinfo

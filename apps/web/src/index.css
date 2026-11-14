@@ -1,0 +1,41 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --background: 40 33% 95%;
+  --foreground: 210 33% 12%;
+  --card: 40 45% 99%;
+  --card-foreground: 210 33% 12%;
+  --primary: 207 48% 16%;
+  --primary-foreground: 40 40% 96%;
+  --secondary: 36 28% 90%;
+  --secondary-foreground: 210 30% 16%;
+  --muted: 36 22% 92%;
+  --muted-foreground: 210 10% 38%;
+  --accent: 32 46% 38%;
+  --accent-foreground: 40 45% 98%;
+  --destructive: 0 54% 36%;
+  --destructive-foreground: 0 0% 98%;
+  --border: 35 24% 82%;
+  --input: 35 24% 78%;
+  --ring: 207 48% 16%;
+  --radius: 0.65rem;
+  color-scheme: light;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  background:
+    radial-gradient(1200px 400px at 10% -10%, rgba(141, 98, 50, 0.08), transparent 50%),
+    hsl(var(--background));
+  color: hsl(var(--foreground));
+  font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+}
+
+button, input, select, textarea { font: inherit; }
+
+.display { font-family: Palatino, "Palatino Linotype", Georgia, serif; }

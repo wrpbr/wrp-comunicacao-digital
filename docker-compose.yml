@@ -1,0 +1,214 @@
+# POC do Pregão Eletrônico nº 089/2026 (Prefeitura Municipal de Pompéu/MG).
+#
+# `docker compose up -d` sobe tudo com os valores de demonstração abaixo.
+# Para expor o sistema fora da máquina da comissão, copie `.env.example` para `.env`
+# e troque cada segredo: o Compose lê o `.env` desta pasta, e o que estiver nele
+# vence o valor padrão escrito aqui. Nenhum banco publica porta no host.
+
+x-chatwoot-env: &chatwoot-env
+  RAILS_ENV: production
+  NODE_ENV: production
+  INSTALLATION_ENV: docker
+  RAILS_LOG_TO_STDOUT: "true"
+  SECRET_KEY_BASE: ${CHATWOOT_SECRET_KEY_BASE:-poc-pompeu-089-2026-troque-esta-chave-antes-de-qualquer-exposicao-publica-da-rede-municipal-0001}
+  FRONTEND_URL: ${CHATWOOT_FRONTEND_URL:-http://127.0.0.1:3309}
+  FORCE_SSL: ${CHATWOOT_FORCE_SSL:-false}
+  ENABLE_ACCOUNT_SIGNUP: ${CHATWOOT_ENABLE_ACCOUNT_SIGNUP:-false}
+  DEFAULT_LOCALE: pt_BR
+  POSTGRES_HOST: postgres
+  POSTGRES_PORT: "5432"
+  POSTGRES_DATABASE: chatwoot_production
+  POSTGRES_USERNAME: chatwoot
+  POSTGRES_PASSWORD: ${CHATWOOT_DB_PASSWORD:-chatwoot_poc_local}
+  REDIS_URL: redis://redis:6379
+  ACTIVE_STORAGE_SERVICE: local
+  MAILER_SENDER_EMAIL: "WRP POC <nao-enviar@pompeu.local>"
+  RAILS_MAX_THREADS: ${CHATWOOT_RAILS_MAX_THREADS:-5}
+  SIDEKIQ_CONCURRENCY: ${CHATWOOT_SIDEKIQ_CONCURRENCY:-5}
+  # Nada sai para os servidores do fornecedor do Chatwoot: sem métricas de uso e sem relay de push.
+  DISABLE_TELEMETRY: "true"
+  ENABLE_PUSH_RELAY_SERVER: "false"
+  # O webhook do Chatwoot chama a API do WRP pela rede interna do compose. O Chatwoot recusa destino
+  # em rede privada por padrão; com o webhook apontado para o endereço público, use "false".
+  SAFE_FETCH_ALLOW_PRIVATE_NETWORK: ${CHATWOOT_ALLOW_PRIVATE_WEBHOOK:-true}
+
+services:
+  postgres:
+    image: pgvector/pgvector:0.8.7-pg16
+    environment:
+      POSTGRES_USER: wrp
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-wrp_poc_local}
+      POSTGRES_DB: wrp
+      CHATWOOT_DB_PASSWORD: ${CHATWOOT_DB_PASSWORD:-chatwoot_poc_local}
+    volumes:
+      - wrp-pg:/var/lib/postgresql/data
+      - ./infra/postgres/init.sql:/docker-entrypoint-initdb.d/02-chatwoot.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U wrp -d wrp"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    mem_limit: ${WRP_MEM_POSTGRES:-512m}
+    oom_score_adj: ${WRP_OOM_SCORE_ADJ:-0}
+    restart: unless-stopped
+
+  redis:
+    image: redis:7.2.17-alpine
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes:
+      - wrp-redis:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    mem_limit: ${WRP_MEM_REDIS:-192m}
+    oom_score_adj: ${WRP_OOM_SCORE_ADJ:-0}
+    restart: unless-stopped
+
+  wrp-api:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    environment:
+      NODE_ENV: production
+      DEMO_MODE: ${DEMO_MODE:-true}
+      ALLOW_DEMO_MODE: ${ALLOW_DEMO_MODE:-true}
+      DEMO_HINTS: ${DEMO_HINTS:-true}
+      SECRETS_KEY: ${SECRETS_KEY:-demo-poc-pompeu-nao-usar-em-producao}
+      WEBHOOK_SECRET: ${WEBHOOK_SECRET:-demo-webhook-pompeu}
+      DEMO_PASSWORD: ${DEMO_PASSWORD:-Pompeu#089}
+      DEMO_TOTP_SECRET: ${DEMO_TOTP_SECRET:-OBQWIZLOOQZGS4DZ}
+      DATABASE_URL: postgres://wrp:${POSTGRES_PASSWORD:-wrp_poc_local}@postgres:5432/wrp
+      REDIS_URL: redis://redis:6379
+      HOST: 0.0.0.0
+      PORT: "43110"
+      META_MODE: ${META_MODE:-simulator}
+      SIMULATOR_PATTERN: ${SIMULATOR_PATTERN:-random}
+      META_GRAPH_VERSION: ${META_GRAPH_VERSION:-v26.0}
+      META_PHONE_NUMBER_ID: ${META_PHONE_NUMBER_ID:-}
+      META_ACCESS_TOKEN: ${META_ACCESS_TOKEN:-}
+      META_APP_SECRET: ${META_APP_SECRET:-}
+      META_VERIFY_TOKEN: ${META_VERIFY_TOKEN:-}
+      META_TEMPLATE_NAME: ${META_TEMPLATE_NAME:-}
+      META_TEMPLATE_LANGUAGE: ${META_TEMPLATE_LANGUAGE:-pt_BR}
+      META_TEMPLATE_BODY_PARAM: ${META_TEMPLATE_BODY_PARAM:-true}
+      FRANCHISE_MONTHLY: ${FRANCHISE_MONTHLY:-5000}
+      FRANCHISE_PACK_SIZE: ${FRANCHISE_PACK_SIZE:-100}
+      TECHNICAL_RESERVE: ${TECHNICAL_RESERVE:-200}
+      CHATWOOT_BASE_URL: http://chatwoot-rails:3000
+      CHATWOOT_PUBLIC_URL: ${CHATWOOT_FRONTEND_URL:-http://127.0.0.1:3309}
+      CHATWOOT_WEBSITE_TOKEN: ${CHATWOOT_WEBSITE_TOKEN:-demoWebchatPompeu089}
+      ADMIN_ALERT_PHONE: ${ADMIN_ALERT_PHONE:-5537990000999}
+      ALERT_EMAIL: ${ALERT_EMAIL:-gestor@pompeu.mg.gov.br}
+      ALERT_WEBHOOK_URL: ${ALERT_WEBHOOK_URL:-}
+      CORS_ORIGIN: ${CORS_ORIGIN:-https://127.0.0.1:8443,http://127.0.0.1:8088,http://127.0.0.1:43123}
+      BIRTHDAY_AUTORUN: ${BIRTHDAY_AUTORUN:-true}
+      OOH_SENDER: ${OOH_SENDER:-wrp}
+      RATE_LIMIT: "true"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:43110/api/v1/health').then(r=>process.exit(r.ok?0:1),()=>process.exit(1))"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+    mem_limit: ${WRP_MEM_API:-384m}
+    oom_score_adj: ${WRP_OOM_SCORE_ADJ:-0}
+    restart: unless-stopped
+
+  nginx:
+    build:
+      context: .
+      dockerfile: infra/nginx/Dockerfile
+    environment:
+      # Só quando houver outro proxy na frente (borda com TLS do provedor): a faixa de rede dele,
+      # para o IP real do visitante valer na auditoria e no limite por IP. Vazio = este Nginx é a borda.
+      WRP_TRUSTED_PROXY: ${WRP_TRUSTED_PROXY:-}
+      WRP_HTTPS_PORT: ${WRP_HTTPS_PORT:-8443}
+    ports:
+      - "${WRP_BIND:-127.0.0.1}:${WRP_HTTPS_PORT:-8443}:8443"
+      - "${WRP_BIND:-127.0.0.1}:${WRP_HTTP_PORT:-8088}:8080"
+    depends_on:
+      wrp-api:
+        condition: service_healthy
+    mem_limit: ${WRP_MEM_NGINX:-96m}
+    oom_score_adj: ${WRP_OOM_SCORE_ADJ:-0}
+    restart: unless-stopped
+
+  # Prepara o banco do Chatwoot (esquema, semente e migrações) e termina.
+  chatwoot-prepare:
+    image: chatwoot/chatwoot:v4.19.1-ce
+    entrypoint: docker/entrypoints/rails.sh
+    command: ["bundle", "exec", "rails", "db:chatwoot_prepare"]
+    environment: *chatwoot-env
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    mem_limit: ${WRP_MEM_CHATWOOT_RAILS:-1024m}
+    oom_score_adj: ${WRP_OOM_SCORE_ADJ:-0}
+    restart: "no"
+
+  # Deixa o Chatwoot pronto para o atendimento humano (conta do município, atendentes, filas por unidade,
+  # webchat com expediente, respostas prontas e webhook assinado para a API) e termina. Pode rodar de novo.
+  # O Rails só sobe depois dele: a tela pública de primeira configuração do Chatwoot nunca fica exposta.
+  chatwoot-bootstrap:
+    image: chatwoot/chatwoot:v4.19.1-ce
+    entrypoint: docker/entrypoints/rails.sh
+    command: ["bundle", "exec", "rails", "runner", "/wrp/bootstrap.rb"]
+    environment:
+      <<: *chatwoot-env
+      WRP_CW_ACCOUNT_NAME: ${CHATWOOT_ACCOUNT_NAME:-Prefeitura Municipal de Pompéu}
+      # Senha dos atendentes no Chatwoot. Sem CHATWOOT_AGENT_PASSWORD, vale a senha de demonstração do painel.
+      WRP_CW_PASSWORD: ${CHATWOOT_AGENT_PASSWORD:-${DEMO_PASSWORD:-Pompeu#089}}
+      WRP_CW_WEBSITE_TOKEN: ${CHATWOOT_WEBSITE_TOKEN:-demoWebchatPompeu089}
+      WRP_CW_WEBHOOK_URL: ${CHATWOOT_WEBHOOK_URL:-http://wrp-api:43110/api/v1/webhooks/chatwoot}
+      WRP_CW_WEBHOOK_SECRET: ${WEBHOOK_SECRET:-demo-webhook-pompeu}
+    volumes:
+      - ./infra/chatwoot/bootstrap.rb:/wrp/bootstrap.rb:ro
+    depends_on:
+      chatwoot-prepare:
+        condition: service_completed_successfully
+    mem_limit: ${WRP_MEM_CHATWOOT_RAILS:-1024m}
+    oom_score_adj: ${WRP_OOM_SCORE_ADJ:-0}
+    restart: "no"
+
+  chatwoot-rails:
+    image: chatwoot/chatwoot:v4.19.1-ce
+    entrypoint: docker/entrypoints/rails.sh
+    command: ["bundle", "exec", "rails", "s", "-p", "3000", "-b", "0.0.0.0"]
+    ports:
+      - "${WRP_BIND:-127.0.0.1}:${CHATWOOT_PORT:-3309}:3000"
+    environment: *chatwoot-env
+    volumes:
+      - wrp-chatwoot:/app/storage
+    depends_on:
+      chatwoot-bootstrap:
+        condition: service_completed_successfully
+    mem_limit: ${WRP_MEM_CHATWOOT_RAILS:-1024m}
+    oom_score_adj: ${WRP_OOM_SCORE_ADJ:-0}
+    restart: unless-stopped
+
+  chatwoot-sidekiq:
+    image: chatwoot/chatwoot:v4.19.1-ce
+    entrypoint: docker/entrypoints/rails.sh
+    command: ["bundle", "exec", "sidekiq", "-C", "config/sidekiq.yml"]
+    environment: *chatwoot-env
+    volumes:
+      - wrp-chatwoot:/app/storage
+    depends_on:
+      chatwoot-bootstrap:
+        condition: service_completed_successfully
+    mem_limit: ${WRP_MEM_CHATWOOT_SIDEKIQ:-768m}
+    oom_score_adj: ${WRP_OOM_SCORE_ADJ:-0}
+    restart: unless-stopped
+
+volumes:
+  wrp-pg:
+  wrp-redis:
+  wrp-chatwoot:

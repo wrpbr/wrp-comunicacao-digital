@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 900">
+  <rect width="1600" height="900" fill="#102033"/>
+  <rect x="80" y="80" width="1440" height="740" rx="28" fill="#173049"/>
+  <text x="140" y="220" fill="#c4a46a" font-family="Georgia, serif" font-size="36">UBS CENTRO · POMPÉU/MG</text>
+  <text x="140" y="340" fill="#f4efe6" font-family="Georgia, serif" font-size="92">Segunda a sexta</text>
+  <text x="140" y="460" fill="#f4efe6" font-family="Georgia, serif" font-size="92">8h às 17h</text>
+  <text x="140" y="600" fill="#d7deea" font-family="Segoe UI, sans-serif" font-size="34">Atendimento humano. Fora desse horário, o WhatsApp registra</text>
+  <text x="140" y="652" fill="#d7deea" font-family="Segoe UI, sans-serif" font-size="34">a mensagem e um servidor responde no próximo expediente.</text>
+</svg>
