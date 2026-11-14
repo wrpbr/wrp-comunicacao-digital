@@ -66,6 +66,10 @@ paths:
             Admin e gestor: totpRequired=true, com challengeToken válido por 5 minutos para POST /api/v1/auth/totp.
         '401':
           description: Credenciais inválidas
+        '429':
+          description: |
+            Muitas tentativas nesta conta. A partir da quinta senha errada em 24 horas a conta impõe espera,
+            de 30 segundos a 1 hora; o cabeçalho Retry-After traz os segundos que faltam.
   /api/v1/auth/totp:
     post:
       tags: [Autenticação]
@@ -90,6 +94,10 @@ paths:
           description: Sessão aberta, com token e user
         '401':
           description: Desafio expirado ou código inválido
+        '429':
+          description: |
+            Muitas tentativas nesta conta. A partir do quinto código errado em 24 horas a conta impõe espera,
+            de 30 segundos a 1 hora; o cabeçalho Retry-After traz os segundos que faltam.
   /api/v1/auth/session:
     delete:
       tags: [Autenticação]
@@ -266,8 +274,10 @@ paths:
     post:
       tags: [LGPD]
       summary: Registra ou remove opt-out do cidadão
+      description: |
+        Exige sessão de administrador, gestor ou atendente. O próprio cidadão cancela pelo WhatsApp, com
+        PARAR, SAIR ou OPT-OUT.
       operationId: optOut
-      security: []
       requestBody:
         required: true
         content:
@@ -280,7 +290,7 @@ paths:
                   type: string
                 active:
                   type: boolean
-                  description: Sem autenticação, somente active=true é aceito.
+                  description: Padrão true (registra o opt-out). active=false reverte, e só administrador e gestor podem.
                 reason:
                   type: string
                 legalException:
@@ -290,6 +300,10 @@ paths:
       responses:
         '200':
           description: Registro de opt-out atualizado
+        '401':
+          description: Sem sessão
+        '403':
+          description: Perfil sem permissão para registrar, reverter ou marcar exceção legal
   /api/v1/tv/{unitSlug}/call:
     post:
       tags: [TV]

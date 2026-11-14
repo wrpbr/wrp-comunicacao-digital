@@ -8,6 +8,7 @@ import { createRequire } from 'node:module';
 import path from 'node:path';
 import { ZodError, type ZodType } from 'zod';
 import { openApiYaml } from './openapi.js';
+import { LoginThrottle } from './attempts.js';
 import type { AppConfig } from './config.js';
 import { decryptString, encryptString, metaSignature, randomToken, readChallenge, safeEqual, sha256Hex, signChallenge, verifyPassword } from './crypto.js';
 import { demoDisplayToken } from './domain.js';
@@ -24,6 +25,8 @@ export type AppDeps = {
   adapter: DocAdapter;
   config: AppConfig;
   logger?: boolean;
+  /** Relógio do freio de tentativas de login; os testes informam um relógio que eles controlam. */
+  now?: () => number;
 };
 
 const actorBag = new WeakMap<FastifyRequest, AuthUser | null>();
@@ -107,6 +110,7 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
 
   app.setErrorHandler((error, request, reply) => {
     if (error instanceof HttpError) {
+      if (error.retryAfter) reply.header('Retry-After', String(error.retryAfter));
       return reply.status(error.status).send({ error: error.code, message: error.message });
     }
     if (error instanceof ZodError) {
@@ -133,7 +137,7 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
     reply.type('text/html; charset=utf-8').send(DOCS_HTML);
   });
 
-  await registerRoutes(app, { adapter, config, issueSession, rawBody });
+  await registerRoutes(app, { adapter, config, issueSession, rawBody, throttle: new LoginThrottle(deps.now) });
   return app;
 
   async function issueSession(user: UserRecord): Promise<string> {

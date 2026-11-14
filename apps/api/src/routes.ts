@@ -17,6 +17,7 @@ import {
   verifyTotp,
   type AppDeps,
 } from './app.js';
+import type { LoginThrottle } from './attempts.js';
 import { chatwootSignature, decryptString, sha256Hex } from './crypto.js';
 import { isOpen } from './domain.js';
 import { HttpError } from './http.js';
@@ -56,6 +57,8 @@ const CAMPAIGN_ROLES: Role[] = ['admin', 'gestor'];
 const AUDIT_ROLES: Role[] = ['admin', 'gestor', 'auditor'];
 const CHECKIN_ROLES: Role[] = ['admin', 'gestor', 'lancador_fila'];
 const CALL_ROLES: Role[] = ['admin', 'gestor', 'atendente'];
+/** Quem atende o cidadão registra o pedido de opt-out; reverter e marcar exceção legal é só de CAMPAIGN_ROLES. */
+const OPT_OUT_ROLES: Role[] = ['admin', 'gestor', 'atendente'];
 
 const SegmentSchema = z.object({
   match: z.enum(['AND', 'OR']),
@@ -67,10 +70,11 @@ const SegmentSchema = z.object({
 type Deps = AppDeps & {
   issueSession: (user: UserRecord) => Promise<string>;
   rawBody: (request: FastifyRequest) => string;
+  throttle: LoginThrottle;
 };
 
 export async function registerRoutes(app: FastifyInstance, deps: Deps): Promise<void> {
-  const { adapter, config } = deps;
+  const { adapter, config, throttle } = deps;
   const ctx = { adapter, config };
   const ipOf = (request: FastifyRequest) => request.ip || '';
   const flush = (alerts: AlertRecord[]) => dispatchAlertHooks(ctx, alerts);
@@ -122,9 +126,13 @@ export async function registerRoutes(app: FastifyInstance, deps: Deps): Promise<
     const body = parseBody(z.object({ email: z.string().email(), password: z.string().min(1) }), request.body);
     const users = await adapter.list<UserRecord>('users');
     const user = users.find((item) => item.email.toLowerCase() === body.email.toLowerCase() && item.active);
-    if (!user || !(await verifyPassword(body.password, user.passwordHash))) {
+    if (!user) throw new HttpError(401, 'Credenciais inválidas.', 'credenciais');
+    // O freio por conta vem antes da conferência: durante a espera nem a senha certa entra.
+    const attempt = throttle.begin('senha', user.id, ipOf(request));
+    if (!(await verifyPassword(body.password, user.passwordHash))) {
       throw new HttpError(401, 'Credenciais inválidas.', 'credenciais');
     }
+    attempt.succeeded();
     if (user.totpEnabled) {
       if (!user.totpSecretCipher) throw new HttpError(409, '2FA ainda não configurado.', 'totp_ausente');
       const secret = decryptString(user.totpSecretCipher, config.secretsKey);
@@ -141,6 +149,7 @@ export async function registerRoutes(app: FastifyInstance, deps: Deps): Promise<
           : undefined,
       };
     }
+    throttle.trust(user.id, ipOf(request));
     const token = await deps.issueSession(user);
     await recordAudit(adapter, {
       actorUserId: user.id,
@@ -160,7 +169,11 @@ export async function registerRoutes(app: FastifyInstance, deps: Deps): Promise<
     const user = await adapter.get<UserRecord>('users', userId);
     if (!user?.totpSecretCipher) throw new HttpError(401, 'Usuário sem 2FA.', 'totp_ausente');
     const secret = decryptString(user.totpSecretCipher, config.secretsKey);
+    // Quem tem a senha pede desafios novos à vontade: o código de 6 dígitos só fica seguro com o freio por conta.
+    const attempt = throttle.begin('totp', user.id, ipOf(request));
     if (!verifyTotp(body.code, secret)) throw new HttpError(401, 'Código 2FA inválido.', 'totp_invalido');
+    attempt.succeeded();
+    throttle.trust(user.id, ipOf(request));
     const token = await deps.issueSession(user);
     await recordAudit(adapter, {
       actorUserId: user.id,
@@ -262,7 +275,9 @@ export async function registerRoutes(app: FastifyInstance, deps: Deps): Promise<
   });
 
   app.post('/api/v1/opt-out', async (request) => {
-    const actor = getActor(request);
+    // O cidadão cancela pelo WhatsApp (PARAR, SAIR ou OPT-OUT), que prova que o número é dele. Por esta rota só
+    // registra quem atende o cidadão: sem sessão, qualquer visitante tiraria o telefone de outra pessoa dos avisos.
+    const actor = requireActor(request, OPT_OUT_ROLES);
     const body = parseBody(
       z.object({
         phone: z.string().min(12),
@@ -274,16 +289,15 @@ export async function registerRoutes(app: FastifyInstance, deps: Deps): Promise<
       request.body,
     );
     const active = body.active ?? true;
-    if (!actor && active === false) throw new HttpError(401, 'Reativar o contato exige um gestor autenticado.', 'nao_autenticado');
-    if ((body.legalException !== undefined || active === false) && (!actor || !CAMPAIGN_ROLES.includes(actor.role))) {
+    if ((body.legalException !== undefined || active === false) && !CAMPAIGN_ROLES.includes(actor.role)) {
       throw new HttpError(403, 'Somente admin ou gestor altera exceção legal ou reverte o opt-out.', 'proibido');
     }
     const record = await setOptOut(ctx, {
       phone: body.phone,
       active,
-      source: actor ? 'admin' : 'api',
+      source: 'admin',
       reason: body.reason,
-      actor: actor ?? { id: 'publico', role: 'cidadao' },
+      actor,
       ip: ipOf(request),
       legalException: body.legalException,
       legalExceptionBasis: body.legalExceptionBasis,

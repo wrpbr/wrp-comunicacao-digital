@@ -8,7 +8,9 @@ Perfis: `admin`, `gestor`, `atendente`, `lancador_fila` e `auditor`. A API recus
 
 Administrador e gestor entram com senha e código TOTP (otplib, passo de 30 segundos, aceitando um passo de diferença no relógio). Os demais perfis usam só a senha. A senha fica guardada como hash scrypt. A sessão dura 12 horas, e o servidor guarda só o SHA-256 do token entregue ao navegador.
 
-O lançador emite senha de fila e não chama. O atendente chama e não emite. O auditor lê auditoria, relatórios e cadastro, e não dispara campanha nem reverte opt-out.
+Tentativas de login têm freio por conta, além do limite por endereço da borda. As quatro primeiras falhas em 24 horas não impõem espera. A quinta impõe 30 segundos, e cada falha seguinte dobra a espera, até 1 hora. Durante a espera a API responde 429 com `Retry-After`, mesmo para a senha certa, e o acerto zera a contagem. A senha e o código TOTP têm contagens separadas. O critério é o da NIST SP 800-63B-4, seção 3.2.2. O endereço que já concluiu um login na conta tem contagem própria nela: quem erra a senha de fora faz esperar os endereços desconhecidos, e não o servidor que entra sempre da mesma rede.
+
+O lançador emite senha de fila e não chama. O atendente chama e não emite. O auditor lê auditoria, relatórios e cadastro, e não dispara campanha nem registra ou reverte opt-out.
 
 ## Transporte e borda
 
@@ -43,7 +45,7 @@ A verificação do webhook da Meta (`GET /api/v1/webhooks/meta`) responde ao des
 
 ## LGPD no fluxo
 
-Opt-out por `POST /api/v1/opt-out`, pelo botão do painel ou pelas palavras `PARAR`, `SAIR` e `OPT-OUT`. O bloqueio vale na hora para campanha, aniversário e canal de servidores.
+O cidadão cancela pelo WhatsApp, com as palavras `PARAR`, `SAIR` e `OPT-OUT`: a mensagem prova que o número é dele. Quem pede no balcão é atendido por um servidor, que registra o pedido pelo botão do painel ou por `POST /api/v1/opt-out`. Essa rota exige sessão de administrador, gestor ou atendente; sem sessão ela responde 401, para que um visitante não tire o telefone de outra pessoa dos avisos. Reverter o opt-out e marcar exceção legal é só de administrador e gestor. O bloqueio vale na hora para campanha, aniversário e canal de servidores.
 
 A exceção do art. 7º só é usada se o cadastro tiver `legalException` e a campanha declarar que honra essa base. Urgência não ignora opt-out.
 
@@ -60,5 +62,5 @@ Transferência internacional: a política em `/privacidade` declara que ela só 
 - O certificado TLS gerado na primeira subida do Nginx é autoassinado, para a demonstração local. Num endereço público, o certificado é o da borda que publica o sistema.
 - O compose não cifra o volume do banco. A cifra em repouso do banco inteiro depende do disco do servidor. No nível da aplicação, ficam cifrados o token da WABA, os segredos TOTP e as chaves dos painéis.
 - O compose não traz WAF. A proteção contra OWASP Top 10 e a mitigação de negação de serviço antes da aplicação ficam na borda que publica o sistema.
-- Não há bloqueio de conta por tentativas de senha ou de código: o freio é o limite por endereço descrito acima.
+- O freio de tentativas de login fica na memória da API: reiniciar o serviço zera as contagens. Ele só existe para e-mail cadastrado, então a espera e o tempo de resposta permitem a um terceiro descobrir se um e-mail tem conta.
 - Backup em outra localidade, varredura periódica de vulnerabilidades e plano de resposta a incidentes são da operação contratada, não deste POC.

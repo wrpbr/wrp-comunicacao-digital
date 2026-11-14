@@ -3,6 +3,8 @@ export class HttpError extends Error {
     public status: number,
     message: string,
     public code: string,
+    /** Espera em segundos, enviada no cabeçalho `Retry-After`. */
+    public retryAfter?: number,
   ) {
     super(message);
     this.name = 'HttpError';

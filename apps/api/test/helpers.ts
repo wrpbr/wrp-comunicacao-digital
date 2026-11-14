@@ -5,7 +5,7 @@ import { MemoryAdapter } from '../src/store/memory.js';
 import { seedIfEmpty } from '../src/store/seed.js';
 import { currentTotp } from '../src/totp.js';
 
-export async function createTestApp(overrides: ConfigOverrides = {}) {
+export async function createTestApp(overrides: ConfigOverrides = {}, deps: { now?: () => number } = {}) {
   const config = makeConfig(
     { NODE_ENV: 'test', RATE_LIMIT: 'false' },
     {
@@ -25,7 +25,7 @@ export async function createTestApp(overrides: ConfigOverrides = {}) {
   );
   const adapter = new MemoryAdapter();
   await seedIfEmpty(adapter, config);
-  const app = await buildApp({ adapter, config, logger: false });
+  const app = await buildApp({ adapter, config, logger: false, now: deps.now });
   return { app, adapter, config };
 }
 
