@@ -36,6 +36,7 @@ export type AppConfig = {
   chatwootBaseUrl: string;
   /** Endereço que o navegador do servidor público abre. */
   chatwootPublicUrl: string;
+  chatwootWhatsappRelay: boolean;
   /** Token da caixa de entrada Website do Chatwoot. Com ele o painel oferece o link do webchat do cidadão. */
   chatwootWebsiteToken?: string;
   chatwootApiToken?: string;
@@ -100,6 +101,7 @@ export function makeConfig(env: NodeJS.ProcessEnv = process.env, overrides: Conf
     technicalReserve: overrides.technicalReserve ?? Number(env.TECHNICAL_RESERVE ?? 200),
     chatwootBaseUrl,
     chatwootPublicUrl: overrides.chatwootPublicUrl ?? (env.CHATWOOT_PUBLIC_URL || chatwootBaseUrl),
+    chatwootWhatsappRelay: overrides.chatwootWhatsappRelay ?? env.CHATWOOT_WHATSAPP_RELAY === 'true',
     chatwootWebsiteToken: overrides.chatwootWebsiteToken ?? (env.CHATWOOT_WEBSITE_TOKEN || undefined),
     chatwootApiToken: overrides.chatwootApiToken ?? (env.CHATWOOT_API_TOKEN || undefined),
     adminAlertPhone: overrides.adminAlertPhone ?? (env.ADMIN_ALERT_PHONE || '5537990000999'),

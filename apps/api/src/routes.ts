@@ -22,6 +22,7 @@ import { chatwootSignature, decryptString, sha256Hex } from './crypto.js';
 import { isOpen } from './domain.js';
 import { HttpError } from './http.js';
 import { auditToCsv, filterAudit, recordAudit } from './services/audit.js';
+import { forwardMetaToChatwoot } from './services/chatwoot.js';
 import { applyDemoScenario, authorizePacks, getFranchise, reconcileFranchise, setReserveSize } from './services/franchise.js';
 import {
   applyDeliveryStatus,
@@ -824,9 +825,9 @@ export async function registerRoutes(app: FastifyInstance, deps: Deps): Promise<
   });
 
   app.post('/api/v1/webhooks/meta', async (request) => {
+    const header = request.headers['x-hub-signature-256'];
     if (config.metaMode === 'live') {
       if (!config.metaAppSecret) throw new HttpError(401, 'META_APP_SECRET ausente.', 'webhook_recusado');
-      const header = request.headers['x-hub-signature-256'];
       const expected = metaSignature(deps.rawBody(request), config.metaAppSecret);
       if (typeof header !== 'string' || !safeEqual(header, expected)) {
         throw new HttpError(401, 'Assinatura Meta inválida.', 'assinatura_invalida');
@@ -840,6 +841,15 @@ export async function registerRoutes(app: FastifyInstance, deps: Deps): Promise<
       );
     }
     const body = (request.body ?? {}) as MetaBody;
+    const relay = config.metaMode === 'live' && config.chatwootWhatsappRelay;
+    if (relay && typeof header === 'string') {
+      const metadata = body.entry?.flatMap((entry) => entry.changes ?? [])
+        .map((change) => change.value?.metadata).find((value) => value?.phone_number_id === config.metaPhoneNumberId);
+      if (!metadata?.display_phone_number) {
+        throw new HttpError(400, 'Telefone do webhook não corresponde ao número configurado.', 'telefone_webhook_invalido');
+      }
+      await forwardMetaToChatwoot(config, deps.rawBody(request), header, metadata.display_phone_number);
+    }
     const alerts: AlertRecord[] = [];
     if (body.from && body.text && config.metaMode === 'simulator') {
       const inbound = await recordInbound(ctx, { from: body.from, text: body.text, unitSlug: body.unitSlug, ip: ipOf(request) });
@@ -848,6 +858,8 @@ export async function registerRoutes(app: FastifyInstance, deps: Deps): Promise<
     for (const entry of body.entry ?? []) {
       for (const change of entry.changes ?? []) {
         for (const message of change.value?.messages ?? []) {
+          // A mensagem recebida chega pelo webhook assinado do Chatwoot após entrar na fila dele.
+          if (relay) continue;
           if (!message.from || !message.text?.body) continue;
           const inbound = await recordInbound(ctx, { from: message.from, text: message.text.body, ip: ipOf(request) });
           alerts.push(...inbound.alerts);
@@ -942,6 +954,7 @@ type MetaBody = {
   entry?: {
     changes?: {
       value?: {
+        metadata?: { phone_number_id?: string; display_phone_number?: string };
         messages?: { from?: string; text?: { body?: string } }[];
         statuses?: { id?: string; status?: string }[];
       };

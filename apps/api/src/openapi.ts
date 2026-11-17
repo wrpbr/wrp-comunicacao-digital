@@ -397,6 +397,9 @@ paths:
       summary: Recebe mensagens do cidadão e status de entrega
       description: |
         Com META_MODE=live, a Meta assina o corpo no cabeçalho X-Hub-Signature-256 (HMAC SHA-256 com META_APP_SECRET).
+        Com CHATWOOT_WHATSAPP_RELAY=true, a API repassa o corpo e a assinatura originais ao Chatwoot
+        antes de confirmar a entrega. Os recibos continuam na API; as mensagens recebidas são tratadas
+        pelo webhook assinado do Chatwoot. Falha no repasse retorna 502 para a Meta repetir a entrega.
         Com META_MODE=simulator, o operador do ensaio simula a mensagem recebida: exige a sessão do painel
         ou o cabeçalho X-WRP-Webhook-Secret.
       operationId: metaWebhook

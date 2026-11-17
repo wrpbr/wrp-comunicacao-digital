@@ -83,6 +83,7 @@ O comando apaga a base de demonstração, inclusive a trilha de auditoria do ens
 
 - Dentro da janela de 24 horas do cidadão vai texto livre. Fora dela, a Meta só aceita modelo aprovado: informe o nome em `META_TEMPLATE_NAME` (idioma em `META_TEMPLATE_LANGUAGE`).
 - O webhook da Meta é `/api/v1/webhooks/meta` e exige a assinatura `X-Hub-Signature-256`.
+- Com a caixa WhatsApp do Chatwoot configurada, `CHATWOOT_WHATSAPP_RELAY=true` repassa os eventos assinados ao atendimento e mantém os recibos das campanhas na API. A configuração está em [docs/CHATWOOT.md](docs/CHATWOOT.md).
 - O token também pode ser gravado por `PUT /api/v1/settings/waba`, só pelo administrador. Ele fica cifrado com AES-256-GCM.
 - O lote de 100 do item (vii) roda sempre no simulador. Os cem destinatários são números de teste que não existem, e nenhum deles recebe mensagem pela conta real.
 
