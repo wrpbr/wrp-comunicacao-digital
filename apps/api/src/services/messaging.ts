@@ -401,7 +401,7 @@ export async function recordInbound(
 
 export async function recordAgentEcho(
   ctx: ServiceCtx,
-  input: { phone: string; body: string; externalId?: string; actor: Actor; ip?: string },
+  input: { phone: string; body: string; externalId?: string; withinServiceWindow?: boolean; actor: Actor; ip?: string },
 ): Promise<{ message: Message; alerts: AlertRecord[] }> {
   const phone = assertSafe(input.phone);
   if (input.externalId) {
@@ -409,7 +409,7 @@ export async function recordAgentEcho(
     if (existing) return { message: existing, alerts: [] };
   }
   const person = await findPersonByPhone(ctx.adapter, phone);
-  const windowOpen = within24h(person?.lastInboundAt);
+  const windowOpen = input.withinServiceWindow ?? within24h(person?.lastInboundAt);
   const klass = classifyOutbound({ kind: 'agent_reply', withinServiceWindow: windowOpen, metaRejected: false });
   let alerts: AlertRecord[] = [];
   if (klass.billable && klass.bucket === 'franchise') {

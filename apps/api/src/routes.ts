@@ -875,7 +875,8 @@ export async function registerRoutes(app: FastifyInstance, deps: Deps): Promise<
   });
 
   app.post('/api/v1/webhooks/chatwoot', async (request) => {
-    if (!getActor(request) && !hasWebhookSecret(request) && !chatwootSigned(request)) {
+    const signed = chatwootSigned(request);
+    if (!getActor(request) && !hasWebhookSecret(request) && !signed) {
       throw new HttpError(401, 'Webhook do Chatwoot não autorizado.', 'webhook_recusado');
     }
     const parsed = readChatwoot((request.body ?? {}) as Record<string, unknown>);
@@ -889,6 +890,7 @@ export async function registerRoutes(app: FastifyInstance, deps: Deps): Promise<
         phone: parsed.phone,
         body: parsed.text,
         externalId: parsed.externalId,
+        withinServiceWindow: signed ? parsed.withinServiceWindow : undefined,
         actor: { id: 'chatwoot', role: 'atendente' },
         ip: ipOf(request),
       });
@@ -972,6 +974,7 @@ function readChatwoot(body: Record<string, unknown>): {
   text?: string;
   sector?: string;
   externalId?: string;
+  withinServiceWindow?: boolean;
 } {
   const event = String(body.event ?? '');
   const phone = digPhone(body);
@@ -981,7 +984,12 @@ function readChatwoot(body: Record<string, unknown>): {
     // Nota interna e mensagem de atividade não chegam ao cidadão: não são resposta do atendente.
     if (body.private === true) return { kind: 'ignore' };
     if (body.message_type === 'incoming' || body.message_type === 0) return { kind: 'incoming', phone, text, externalId };
-    if (body.message_type === 'outgoing' || body.message_type === 1) return { kind: 'outgoing', phone, text, externalId };
+    if (body.message_type === 'outgoing' || body.message_type === 1) {
+      const conversation = body.conversation as { channel?: string; can_reply?: boolean } | undefined;
+      const withinServiceWindow = conversation?.channel === 'Channel::Whatsapp' && typeof conversation.can_reply === 'boolean'
+        ? conversation.can_reply : undefined;
+      return { kind: 'outgoing', phone, text, externalId, withinServiceWindow };
+    }
     return { kind: 'ignore' };
   }
   const meta = body.meta as { assignee?: { name?: string }; team?: { name?: string } } | undefined;

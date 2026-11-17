@@ -5,7 +5,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { chatwootSignature, metaSignature } from '../src/crypto.js';
 import { sendOutbound } from '../src/services/messaging.js';
 import type { Message } from '../src/types.js';
-import { createTestApp } from './helpers.js';
+import { auth, createTestApp, login } from './helpers.js';
 
 const APP_SECRET = 'segredo-do-app';
 const PHONE_ID = '1392056510668768';
@@ -142,5 +142,47 @@ describe('Meta e Chatwoot no mesmo callback', () => {
     expect((await post(app, body)).statusCode).toBe(200);
     expect(received).toHaveLength(0);
     expect(await adapter.list('messages')).toHaveLength(1);
+  });
+
+  it.each([true, false])('usa a janela WhatsApp do Chatwoot para contato novo: aberta=%s', async (canReply) => {
+    const { app, adapter } = await setup();
+    const event = JSON.stringify({
+      event: 'message_created', id: 9002, message_type: 'outgoing',
+      private: false, content: 'Resposta de atendimento.',
+      conversation: {
+        channel: 'Channel::Whatsapp', can_reply: canReply,
+        meta: { sender: { phone_number: '+5537990001999' } },
+      },
+    });
+    const timestamp = String(Math.floor(Date.now() / 1000));
+    const response = await app.inject({
+      method: 'POST', url: '/api/v1/webhooks/chatwoot', payload: event,
+      headers: {
+        'content-type': 'application/json', 'x-chatwoot-timestamp': timestamp,
+        'x-chatwoot-signature': chatwootSignature(timestamp, event, 'demo-webhook-pompeu'),
+      },
+    });
+    expect(response.statusCode).toBe(200);
+    expect(response.json().billable).toBe(!canReply);
+    const [message] = await adapter.list<Message>('messages');
+    expect(message.withinServiceWindow).toBe(canReply);
+  });
+
+  it('não aceita a janela declarada por um operador sem a assinatura do Chatwoot', async () => {
+    const { app } = await setup();
+    const token = await login(app, 'admin@pompeu.mg.gov.br');
+    const response = await app.inject({
+      method: 'POST', url: '/api/v1/webhooks/chatwoot', headers: auth(token),
+      payload: {
+        event: 'message_created', id: 9002, message_type: 'outgoing',
+        private: false, content: 'Resposta de atendimento.',
+        conversation: {
+          channel: 'Channel::Whatsapp', can_reply: true,
+          meta: { sender: { phone_number: '+5537990001999' } },
+        },
+      },
+    });
+    expect(response.statusCode).toBe(200);
+    expect(response.json().billable).toBe(true);
   });
 });
