@@ -1,4 +1,4 @@
-# WRP Comunicação Digital
+# Comunicação Digital
 
 Plataforma para a prefeitura falar com o cidadão pelo WhatsApp oficial e pela TV das unidades: campanhas segmentadas por bairro, interesse e prédio público, atendimento humano com fila por unidade, chamada de senhas na TV, controle da franquia mensal e trilha de auditoria exportável. Este repositório é a demonstração técnica (POC) do **Pregão Eletrônico nº 089/2026** (Processo 243/2026) da **Prefeitura Municipal de Pompéu/MG**, e sobe inteira com um comando.
 

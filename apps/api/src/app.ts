@@ -180,7 +180,7 @@ const DOCS_HTML = `<!doctype html>
 <html lang="pt-BR">
 <head>
   <meta charset="utf-8" />
-  <title>WRP Comunicação Digital — API</title>
+  <title>Comunicação Digital — API</title>
   <link rel="stylesheet" href="/docs/assets/swagger-ui.css" />
   <style>body { margin: 0; } .topbar { display: none; }</style>
 </head>

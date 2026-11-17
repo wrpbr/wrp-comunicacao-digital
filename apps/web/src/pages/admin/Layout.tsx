@@ -29,7 +29,7 @@ export function AdminLayout() {
       <aside className={`${open ? 'block' : 'hidden'} border-b border-white/10 bg-[#102033] text-[#f4efe6] md:block`}>
         <div className="px-4 py-5">
           <p className="text-[10px] uppercase tracking-[0.18em] text-[#c4a46a]">Pompéu/MG</p>
-          <p className="display text-xl">WRP Comunicação</p>
+          <p className="display text-xl">Comunicação Digital</p>
           <p className="mt-2 text-xs text-white/70">{user?.name}<br />{user ? roleLabel(user.role) : ''}</p>
         </div>
         <nav className="flex flex-col px-2 pb-6">

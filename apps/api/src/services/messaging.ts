@@ -625,7 +625,7 @@ export async function runBirthdays(
   }
   const campaign = await createCampaign(ctx, {
     name: `Aniversariantes ${currentDateKey()}`,
-    body: 'A Prefeitura de Pompéu e a WRP Comunicação Digital desejam um feliz aniversário, {{nome}}. Mensagem institucional — responda PARAR para não receber novos comunicados.',
+    body: 'A Prefeitura de Pompéu e a Comunicação Digital desejam um feliz aniversário, {{nome}}. Mensagem institucional — responda PARAR para não receber novos comunicados.',
     segment: { match: 'AND', rules: [] },
     kind: 'aniversario',
     actor,
@@ -687,7 +687,7 @@ export async function runTestBatch(
   const before = (await getFranchise(ctx.adapter, ctx.config)).used;
   const campaign = await createCampaign(ctx, {
     name: `Lote POC 100 — ${formatSaoPaulo()}`,
-    body: 'Mensagem de teste do POC WRP Comunicação Digital (Pregão 089/2026). Não é um comunicado oficial ao cidadão. Responda PARAR para opt-out.',
+    body: 'Mensagem de teste do POC Comunicação Digital (Pregão 089/2026). Não é um comunicado oficial ao cidadão. Responda PARAR para opt-out.',
     segment: {
       match: 'OR',
       rules: [

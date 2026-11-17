@@ -90,7 +90,7 @@ export function LoginPage() {
         <form onSubmit={challenge ? onTotp : onSubmit} className="w-full max-w-md space-y-4 rounded-lg border border-border bg-card p-6">
           <div>
             <h2 className="display text-3xl">{challenge ? 'Confirme o 2FA' : 'Entrar'}</h2>
-            <p className="text-sm text-muted-foreground">WRP Comunicação Digital</p>
+            <p className="text-sm text-muted-foreground">Comunicação Digital</p>
           </div>
           {hints && !challenge && (
             <div className="space-y-2">

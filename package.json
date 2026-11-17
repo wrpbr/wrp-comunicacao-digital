@@ -2,7 +2,7 @@
   "name": "wrp-comunicacao-digital",
   "private": true,
   "version": "1.0.0",
-  "description": "POC/MVP WRP Comunicação Digital — Pregão Eletrônico 089/2026, Prefeitura Municipal de Pompéu/MG.",
+  "description": "POC/MVP Comunicação Digital — Pregão Eletrônico 089/2026, Prefeitura Municipal de Pompéu/MG.",
   "engines": {
     "node": ">=22"
   },

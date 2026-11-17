@@ -1,6 +1,6 @@
 export const openApiYaml = `openapi: 3.1.0
 info:
-  title: WRP Comunicação Digital
+  title: Comunicação Digital
   version: 1.0.0
   summary: API do POC/MVP para o Pregão Eletrônico 089/2026 da Prefeitura Municipal de Pompéu/MG.
   description: |

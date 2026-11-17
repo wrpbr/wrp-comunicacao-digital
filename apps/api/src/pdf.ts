@@ -73,7 +73,7 @@ function wrapLine(line: string, max: number): string[] {
   return out;
 }
 
-export function buildPdf(sourceLines: string[], title = 'WRP Comunicação Digital'): Buffer {
+export function buildPdf(sourceLines: string[], title = 'Comunicação Digital'): Buffer {
   const lines = sourceLines.flatMap((line) => wrapLine(line, LINE_MAX));
   const pageSize = 46;
   const pages: string[][] = [];
@@ -109,7 +109,7 @@ export function buildPdf(sourceLines: string[], title = 'WRP Comunicação Digit
   const catalog = `1 0 obj\n<< /Type /Catalog /Pages 2 0 R >>\nendobj\n`;
   const pageTree = `2 0 obj\n<< /Type /Pages /Count ${pageObjectNumbers.length} /Kids [${kids}] >>\nendobj\n`;
   const font = `3 0 obj\n<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>\nendobj\n`;
-  const info = `${next} 0 obj\n<< /Title (${escapePdfText(title)}) /Producer (${escapePdfText('WRP Comunicação Digital')}) >>\nendobj\n`;
+  const info = `${next} 0 obj\n<< /Title (${escapePdfText(title)}) /Producer (${escapePdfText('Comunicação Digital')}) >>\nendobj\n`;
 
   const all = [catalog, pageTree, font, ...objects, info];
   let body = '%PDF-1.4\n';

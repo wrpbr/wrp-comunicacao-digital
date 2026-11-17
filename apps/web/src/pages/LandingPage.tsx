@@ -27,7 +27,7 @@ export function LandingPage() {
       <header className="flex flex-wrap items-end justify-between gap-4 border-b border-border pb-6">
         <div>
           <p className="text-xs uppercase tracking-[0.22em] text-accent">WRP Consultoria e Informática Ltda · CNPJ 66.300.125/0001-45</p>
-          <h1 className="display mt-2 text-4xl text-primary md:text-5xl">WRP Comunicação Digital</h1>
+          <h1 className="display mt-2 text-4xl text-primary md:text-5xl">Comunicação Digital</h1>
           <p className="mt-2 max-w-2xl text-base text-muted-foreground">
             Prova de conceito do Pregão Eletrônico nº 089/2026, Processo 243/2026, para a Prefeitura Municipal de Pompéu/MG.
             Atendimento ao cidadão só com servidor humano. Campanhas e painéis de senha no mesmo sistema.

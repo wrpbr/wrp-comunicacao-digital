@@ -88,7 +88,7 @@ export async function deliveryDocument(
     };
   }
   const lines = [
-    'WRP Comunicação Digital',
+    'Comunicação Digital',
     'Prefeitura Municipal de Pompéu/MG',
     'Pregão Eletrônico nº 089/2026 - Processo 243/2026',
     'CNPJ 66.300.125/0001-45',
@@ -118,7 +118,7 @@ export async function deliveryDocument(
     ),
   ];
   return {
-    body: buildPdf(lines, 'Relatório de entrega WRP'),
+    body: buildPdf(lines, 'Relatório de entrega — Comunicação Digital'),
     contentType: 'application/pdf',
     filename: `${report.id}.pdf`,
   };
@@ -176,7 +176,7 @@ export async function franchiseDocument(adapter: DocAdapter, config: AppConfig, 
     return { body: `\uFEFF${lines.join('\n')}\n`, contentType: 'text/csv; charset=utf-8', filename: `franquia-${month}.csv` };
   }
   const lines = [
-    'WRP Comunicação Digital — consumo da franquia',
+    'Comunicação Digital — consumo da franquia',
     `Prefeitura Municipal de Pompéu/MG — ${month}`,
     `Cota contratual: ${config.franchiseMonthly} mensagens/mês`,
     `Pacotes de ${config.franchisePackSize} autorizados: ${view.packsAuthorized}`,
@@ -193,7 +193,7 @@ export async function franchiseDocument(adapter: DocAdapter, config: AppConfig, 
     alerts.length ? 'Alertas do mês:' : 'Nenhum alerta de franquia neste mês.',
     ...alerts.map((alert) => `- ${brasiliaDateTime(alert.createdAt)}: ${alert.message}`),
   ];
-  return { body: buildPdf(lines, 'Franquia WRP'), contentType: 'application/pdf', filename: `franquia-${month}.pdf` };
+  return { body: buildPdf(lines, 'Franquia — Comunicação Digital'), contentType: 'application/pdf', filename: `franquia-${month}.pdf` };
 }
 
 export async function slaDocument(adapter: DocAdapter, format: 'json' | 'csv' | 'pdf', month = currentMonthKey()) {
@@ -228,7 +228,7 @@ export async function slaDocument(adapter: DocAdapter, format: 'json' | 'csv' | 
     return { body: `\uFEFF${lines.join('\n')}\n`, contentType: 'text/csv; charset=utf-8', filename: `sla-${month}.csv` };
   }
   const lines = [
-    'WRP Comunicação Digital — disponibilidade dos painéis',
+    'Comunicação Digital — disponibilidade dos painéis',
     `Referência ${month} — America/Sao_Paulo`,
     payload.metodologia,
     '',
@@ -237,5 +237,5 @@ export async function slaDocument(adapter: DocAdapter, format: 'json' | 'csv' | 
         `${row.name}: ${(row.availability * 100).toFixed(1).replace('.', ',')}% (${row.onlineHours} de ${row.expectedHours} horas do expediente; horas sem sinal: ${row.gapHours})`,
     ),
   ];
-  return { body: buildPdf(lines, 'SLA dos painéis WRP'), contentType: 'application/pdf', filename: `sla-${month}.pdf` };
+  return { body: buildPdf(lines, 'SLA dos painéis — Comunicação Digital'), contentType: 'application/pdf', filename: `sla-${month}.pdf` };
 }
