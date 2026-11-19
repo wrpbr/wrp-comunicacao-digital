@@ -16,6 +16,8 @@ O lançador emite senha de fila e não chama. O atendente chama e não emite. O 
 
 O Nginx do compose atende em TLS 1.2 e TLS 1.3, e o HTTP só redireciona para o HTTPS. Ele envia `Strict-Transport-Security`, `X-Content-Type-Options`, `X-Frame-Options` e `Referrer-Policy`, e limita cada endereço a 30 requisições por segundo, com rajada curta, antes de a requisição chegar à API. O corpo aceito é de até 2 MB.
 
+A imagem do Nginx é a oficial de base Debian, fixada por digest em `infra/nginx/Dockerfile`, na mesma versão da borda que publica o sistema: 1.31.9 desde 19/11/2026, com as correções de HTTP/2, HTTP/3 e resolver dessa versão. Não use a variante Alpine, que o projeto deixou depois que o Alpine reconstruiu do zero o próprio GitLab, alvo de uma tentativa de ataque cujo sucesso não pôde descartar. Ao atualizar, troque a versão e o digest juntos; tag sem digest não entra.
+
 A API soma Helmet, CORS restrito a `CORS_ORIGIN` e o limite de 300 requisições por minuto por endereço (`@fastify/rate-limit`). O corpo de cada rota é validado com Zod.
 
 PostgreSQL e Redis não publicam porta no host: só os serviços do compose falam com eles, pela rede interna. A API também não publica porta; o acesso é sempre pelo Nginx.
